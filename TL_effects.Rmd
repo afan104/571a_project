@@ -1,0 +1,307 @@
+---
+title: "Analysis"
+author: "Matthew Wallace"
+date: '2023-11-17'
+output: pdf_document
+---
+
+***Calls***
+
+```{r}
+library(glmnet)
+library(MASS)
+library(ggplot2)
+```
+
+***Data Reading***
+
+```{r setup, include=FALSE}
+reproduction <- read.csv("reproduction_data_Pepke_etal_EcolEvol2022clean.csv")
+sparrow <- read.csv("sparrow_data_Pepke_etal_EcolEvol2022clean.csv")
+weather <- read.csv("weather_data_Pepke_etal_EcolEvol2022clean.csv")
+```
+
+***Training and Testing Data Split***
+
+```{r}
+set.seed(1)
+n <- nrow(sparrow)
+train <- sample(1:n,0.8*n)
+sparrow.train <- sparrow[train,]
+sparrow.test <- sparrow[-train,]
+```
+
+
+***Continuous***
+
+```{r}
+## Min Lifespan ----------------------------------------------------------------
+TL_lifespan.lm <- lm(min_lifespan_days~TL, data=sparrow.train)
+summary(TL_lifespan.lm)
+plot(TL_lifespan.lm)
+
+logTL_lifespan.lm <- lm(log(min_lifespan_days)~TL, data=sparrow.train)
+summary(logTL_lifespan.lm)
+plot(logTL_lifespan.lm)
+
+bc <- boxcox(TL_lifespan.lm)
+pwr <- bc$x[which.max(bc$y)]
+bcTL_lifespan.lm <- lm(min_lifespan_days^pwr~TL, data=sparrow.train)
+summary(bcTL_lifespan.lm)
+plot(bcTL_lifespan.lm)
+
+plot(log(min_lifespan_days)~TL, data=sparrow.train,
+     ylab="", xlab="", axes=F)
+abline(coef(logTL_lifespan.lm),col='red')
+axis(side = 3)
+axis(side = 4)
+```
+
+```{r}
+## Mass ------------------------------------------------------------------------
+TL_mass.lm <- lm(mass~TL, data=sparrow.train)
+summary(TL_mass.lm)
+plot(TL_mass.lm)
+
+bc <- boxcox(TL_mass.lm)
+pwr <- bc$x[which.max(bc$y)]
+bcTL_mass.lm <- lm(mass^pwr~TL, data=sparrow.train)
+summary(bcTL_mass.lm)
+plot(bcTL_mass.lm)
+
+plot(mass^pwr~TL, data=sparrow.train, 
+     ylab="", xlab="", axes=F)
+abline(coef(bcTL_mass.lm),col='red')
+axis(side = 3)
+axis(side = 2)
+
+grid <- seq(0,4,by=0.1)
+newdata <- data.frame(TL=grid)
+bcTL_mass.pred <- predict(bcTL_mass.lm, newdata = newdata, interval = "prediction")
+plot(mass^pwr~TL, data=sparrow.train)
+lines(grid, bcTL_mass.pred[, 'fit'], col = "red")
+lines(grid, bcTL_mass.pred[, 'lwr'], col = "red", lty = 2)
+lines(grid, bcTL_mass.pred[, 'upr'], col = "red", lty = 2)
+```
+
+```{r}
+## Tarsus ----------------------------------------------------------------------
+TL_tarsus.lm <- lm(tarsus~TL, data=sparrow.train)
+summary(TL_tarsus.lm)
+plot(TL_tarsus.lm)
+
+logTL_tarsus.lm <- lm(log(tarsus)~TL, data=sparrow.train)
+summary(logTL_tarsus.lm)
+plot(logTL_tarsus.lm)
+
+bc <- boxcox(TL_tarsus.lm)
+pwr <- bc$x[which.max(bc$y)]
+bcTL_tarsus.lm <- lm(tarsus^pwr~TL, data=sparrow.train)
+summary(bcTL_tarsus.lm)
+plot(bcTL_tarsus.lm)
+
+plot(tarsus^pwr~TL, data=sparrow.train,
+     ylab="", xlab="", main="Tarsus Length vs Telomere Length")
+abline(coef(bcTL_tarsus.lm),col='red')
+
+
+grid <- seq(0,4,by=0.1)
+newdata <- data.frame(TL=grid)
+bcTL_tarsus.pred <- predict(bcTL_tarsus.lm, newdata = newdata, interval = "prediction")
+plot(tarsus^pwr~TL, data=sparrow.train)
+lines(grid, bcTL_tarsus.pred[, 'fit'], col = "red")
+lines(grid, bcTL_tarsus.pred[, 'lwr'], col = "red", lty = 2)
+lines(grid, bcTL_tarsus.pred[, 'upr'], col = "red", lty = 2)
+```
+
+```{r}
+## Plotted Together ------------------------------------------------------------
+scale_bcTL_tarsus.lm <- lm(scale(tarsus^2)~TL, data=sparrow.train)
+scale_bcTL_mass.lm <- lm(scale(mass^2)~TL, data=sparrow.train)
+scale_logTL_lifespan.lm <- lm(scale(log(min_lifespan_days))~TL, data=sparrow.train)
+grid <- seq(0,4,by=0.1)
+newdata <- data.frame(TL=grid)
+scale_bcTL_tarsus.pred <- predict(scale_bcTL_tarsus.lm, newdata = newdata, interval = "prediction")
+scale_bcTL_mass.pred <- predict(scale_bcTL_mass.lm, newdata = newdata, interval = "prediction")
+scale_logTL_lifespan.pred <- predict(scale_logTL_lifespan.lm, newdata = newdata, interval = "prediction")
+
+plot(scale(tarsus^pwr)~TL, data=sparrow,col=2,
+  ylab="", xlab="Telomere Length", main="Effects of Telomere Length",
+  ylim=c(-5,3))
+  points(scale(mass^pwr)~TL, data=sparrow,col=3)
+  points(scale(log(min_lifespan_days))~TL, data=sparrow,col=4)
+  
+  lines(grid, scale_bcTL_tarsus.pred[, 'fit'], col = 2)
+  lines(grid, scale_bcTL_tarsus.pred[, 'lwr'], col = 2, lty = 2)
+  lines(grid, scale_bcTL_tarsus.pred[, 'upr'], col = 2, lty = 2)
+  
+  lines(grid, scale_bcTL_mass.pred[, 'fit'], col = 3)
+  lines(grid, scale_bcTL_mass.pred[, 'lwr'], col = 3, lty = 2)
+  lines(grid, scale_bcTL_mass.pred[, 'upr'], col = 3, lty = 2)
+  
+  lines(grid, scale_logTL_lifespan.pred[, 'fit'], col = 4)
+  lines(grid, scale_logTL_lifespan.pred[, 'lwr'], col = 4, lty = 2)
+  lines(grid, scale_logTL_lifespan.pred[, 'upr'], col = 4, lty = 2)
+
+  legend("bottomright",legend=c("Squared Tarsus Length","Squared Mass", "Log Lifespan"),
+         pch = 1, col=2:4, lty=1,)
+
+
+```
+
+
+```{r}
+## Population Size Mean Centered -----------------------------------------------
+summary(sparrow$pop_size_meancentered)
+TL_pop.lm <- lm(pop_size_meancentered~TL, data=sparrow.train)
+summary(TL_pop.lm)
+plot(TL_pop.lm)
+
+pop_size_scaled <- (sparrow$pop_size_meancentered+abs(min(sparrow$pop_size_meancentered))+1) / 
+                   (max(sparrow$pop_size_meancentered+abs(min(sparrow$pop_size_meancentered))+1)/100)
+pop_size_scaled <- data.frame(cbind(TL=sparrow$TL,pop_size_scaled))
+pop_size_scaled.train <- pop_size_scaled[train,]
+pop_size_scaled.test <- pop_size_scaled[-train,]
+
+TL_popscaled.lm <- lm(pop_size_scaled~TL, data=pop_size_scaled.train)
+summary(TL_popscaled.lm)
+plot(TL_popscaled.lm)
+
+logTL_popscaled.lm <- lm(log(pop_size_scaled)~TL, data=pop_size_scaled.train)
+summary(logTL_popscaled.lm)
+plot(logTL_popscaled.lm)
+
+bc <- boxcox(TL_popscaled.lm)
+pwr <- bc$x[which.max(bc$y)]
+bcTL_popscaled.lm <- lm(pop_size_scaled^0.5~TL, data=pop_size_scaled.train)
+summary(bcTL_popscaled.lm)
+plot(bcTL_popscaled.lm)
+
+plot(pop_size_scaled^0.5~TL, data=pop_size_scaled.train,
+     ylab="", xlab="", axes=F)
+abline(coef(bcTL_popscaled.lm),col='red')
+axis(side = 1)
+axis(side = 4)
+```
+
+```{r}
+## Clutch Size -----------------------------------------------------------------
+logTL_clutch.lm <- lm(log(clutch_size)~TL, data=sparrow.train)
+summary(logTL_clutch.lm)
+plot(logTL_clutch.lm)
+
+bc <- boxcox(TL_clutch.lm)
+pwr <- bc$x[which.max(bc$y)]
+bcTL_clutch.lm <- lm(clutch_size^pwr~TL, data=sparrow.train)
+summary(bcTL_clutch.lm)
+plot(bcTL_clutch.lm)
+
+plot(clutch_size~TL, data=sparrow.train,
+     ylab="", xlab="", axes=F)
+abline(coef(TL_clutch.lm),col='red')
+axis(side = 1)
+axis(side = 2)
+```
+
+```{r}
+## Hatch Day Mean Centered -----------------------------------------------------
+TL_hatchday.lm <- lm(hatchday_meancentered~TL, data=sparrow.train)
+summary(TL_hatchday.lm)
+plot(TL_hatchday.lm)
+
+logTL_hatchday.lm <- lm(log(hatchday_meancentered)~TL, data=sparrow.train)
+summary(logTL_hatchday.lm)
+plot(logTL_hatchday.lm)
+
+summary(sparrow$hatchday_meancentered)
+bc <- boxcox(TL_hatchday.lm)
+pwr <- bc$x[which.max(bc$y)]
+bcTL_mass.lm <- lm(hatchday_meancentered^pwr~TL, data=sparrow.train)
+summary(bcTL_hatchday.lm)
+plot(bcTL_hatchday.lm)
+```
+
+
+```{r}
+### WLS ------------------------------------------------------------------------
+ei <- resid(bcTL_lifespan.lm)
+fit_resid <- lm(abs(ei) ~ TL, data=sparrow.train)
+wi <- 1 / fitted(fit_resid)^2
+w1_bcTL_lifespan.lm <- lm(min_lifespan_days^pwr ~ TL, data = sparrow, weights = wi)
+
+ei2 <- resid(w1_bcTL_lifespan.lm)
+fit_resid2 <- lm(abs(ei2) ~ TL, data=sparrow.train)
+wi2 <- 1 / fitted(fit_resid2)^2
+w2_bcTL_lifespan.lm <- lm(min_lifespan_days^pwr ~ TL, data = sparrow.train, weights = wi2)
+
+ei3 <- resid(w2_bcTL_lifespan.lm)
+fit_resid3 <- lm(abs(ei3) ~ TL, data=sparrow.train)
+wi3 <- 1 / fitted(fit_resid3)^2
+w3_bcTL_lifespan.lm <- lm(min_lifespan_days^pwr ~ TL, data = sparrow.train, weights = wi3)
+
+ei4 <- resid(w3_bcTL_lifespan.lm)
+fit_resid4 <- lm(abs(ei4) ~ TL, data=sparrow.train)
+wi4 <- 1 / fitted(fit_resid4)^2
+wls_bcTL_lifespan.lm <- lm(min_lifespan_days^pwr ~ TL, data = sparrow.train, weights = wi4)
+cbind(coef(bcTL_lifespan.lm), coef(w1_bcTL_lifespan.lm), coef(w2_bcTL_lifespan.lm), coef(w3_bcTL_lifespan.lm), coef(wls_bcTL_lifespan.lm))
+
+summary(wls_bcTL_lifespan.lm)
+plot(wls_bcTL_lifespan.lm)
+```
+
+***Categorical***
+
+```{r}
+## First Year Survival ---------------------------------------------------------
+TL_yearsurvival.glm <- glm(firstyear_survival~TL, data=sparrow.train, family = binomial(link = "logit"))
+summary(TL_yearsurvival.glm)
+plot(TL_yearsurvival.glm)
+
+x <- seq(0,4,length.out=1e2)
+y <- predict(TL_yearsurvival.glm, newdata=data.frame(TL=x), type="response")
+plot(firstyear_survival~TL, data=sparrow.train,
+     ylab="", xlab="", main="", axes=F)
+lines(x,y,col='red')
+axis(side = 4)
+axis(side = 1)
+```
+
+
+```{r}
+## Dispersal -------------------------------------------------------------------
+TL_dispersal.glm <- glm(dispersal~TL, data=sparrow.train, family = binomial(link = "logit"))
+summary(TL_dispersal.glm)
+plot(TL_dispersal.glm)
+
+x <- seq(0,4,length.out=1e2)
+y <- predict(TL_dispersal.glm, newdata=data.frame(TL=x), type="response")
+plot(dispersal~TL, data=sparrow.train,
+     ylab="", xlab="", main="",axes=F)
+lines(x,y,col='red')
+axis(side = 4)
+axis(side = 3)
+```
+
+
+```{r}
+## Censored --------------------------------------------------------------------
+TL_censored.glm <- glm(as.factor(censored)~TL, data=sparrow.train, family = binomial(link = "logit"))
+summary(TL_censored.glm)
+plot(TL_censored.glm) 
+```
+
+***Outliers***
+
+```{r}
+par(mfrow = c(3, 4))
+
+for (pred in predictors) {
+  if (is.numeric(sparrow[[pred]])){
+    hist(sparrow[[pred]], main = pred, xlab = "", col = "lightblue", border = "black")
+  } else {
+    hist(sparrow[["TL"]], main = "Telomere Length", xlab = "", col = "lightblue", border = "black")
+  }
+}
+
+sparrow[c(206:214,1764),]
+```
