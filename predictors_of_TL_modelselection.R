@@ -17,7 +17,6 @@ B. Significant predictors
       - Cook's
       - independence of residuals (plot against date, observation no, other 5 ommitted var)
   7) re-transform back into original units
-  8) also try a forward step wise model
       
 "
 #############################################################################################################
