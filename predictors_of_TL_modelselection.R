@@ -1,4 +1,5 @@
 "
+Amy Fan
 Summary:
 
 B. Significant predictors

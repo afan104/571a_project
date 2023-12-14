@@ -1,4 +1,5 @@
 "
+Amy Fan
 Summary: Wrangling data so that LINE assumptions are met
 
 A. Model assumptions
