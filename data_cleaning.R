@@ -26,7 +26,7 @@ remove_na("weather_data_Pepke_etal_EcolEvol2022")
 # check proportion omitted
 compare_na <- function(filename){
     file_unclean <- paste("./data/", filename, ".csv", sep = "")
-    file_clean <- paste("./data_clean/", filename, "clean", sep = "")
+    file_clean <- paste("./data_clean/", filename, "clean.csv", sep = "")
     data <- read.csv(file_unclean)
     clean_data <- read.csv(file_clean)
     paste(c(nrow(data), nrow(clean_data)))
